@@ -4,10 +4,10 @@
 This project conducts comprehensive business intelligence analysis by combining global sales data with traveler sentiment analysis. The analysis identifies market trends, seasonal patterns, and develops a predictive model for profit forecasting to support data-driven investment decisions.
 
 ## Project Structure
-COMP3162.Rmd # Main R Markdown analysis file <br>
-sales_data01.csv # Global sales dataset <br>
-traveler_reviews.csv # Traveler reviews dataset <br>
-README.md # Project documentation <br>
+├──COMP3162.Rmd # Main R Markdown analysis file <br>
+├──sales_data01.csv # Global sales dataset <br>
+├──traveler_reviews.csv # Traveler reviews dataset <br>
+└──README.md # Project documentation <br>
 
 ## Key Analyses Performed
 
