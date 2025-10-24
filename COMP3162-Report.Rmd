@@ -1,0 +1,1024 @@
+---
+title: 'COMP3162: Project'
+author: "McKoy Banton(620156898), Mickoy Banton (620156895)"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
+library(dplyr)
+```
+
+
+# Part I a
+
+```{r load_package, message=FALSE, warning=FALSE}
+library(wordcloud)
+library(RColorBrewer)
+library(wordcloud2)
+library(tm)
+library(syuzhet)
+library(SnowballC)
+library(NLP)
+```
+
+```{r}
+travel_review.df <- read.csv("traveler_reviews.csv", stringsAsFactors = FALSE)
+thailand_review <- travel_review.df[travel_review.df$Country=="Thailand", ]
+malaysia_review <- travel_review.df[travel_review.df$Country=="Malaysia", ]
+japan_review <- travel_review.df[travel_review.df$Country=="Japan", ]
+```
+
+## Thailand
+
+```{r}
+thailand_corpus <- Corpus(VectorSource(thailand_review$ReviewText))
+thailand_corpus <- tm_map(thailand_corpus, content_transformer(tolower))
+thailand_corpus <- tm_map(thailand_corpus, removePunctuation)
+thailand_corpus <- tm_map(thailand_corpus, removeWords, c(stopwords("en"), "bampb", "etc", "amp" ) )
+wordcloud(thailand_corpus, max.words = 150, random.order = FALSE, colors = brewer.pal(8, "Dark2"))
+```
+
+## Malaysia
+
+```{r}
+malaysia_corpus <- Corpus(VectorSource(malaysia_review$ReviewText))
+malaysia_corpus <- tm_map(malaysia_corpus, content_transformer(tolower))
+malaysia_corpus <- tm_map(malaysia_corpus, removePunctuation)
+malaysia_corpus <- tm_map(malaysia_corpus, removeWords, c(stopwords("en"), "bampb", "’d", "etc", "amp" ) )
+wordcloud(malaysia_corpus, max.words = 150, random.order = FALSE, colors = brewer.pal(8, "Dark2"))
+```
+
+## Japan
+
+```{r}
+japan_corpus <- Corpus(VectorSource(japan_review$ReviewText))
+japan_corpus <- tm_map(japan_corpus, content_transformer(tolower))
+japan_corpus <- tm_map(japan_corpus, removePunctuation)
+japan_corpus <- tm_map(japan_corpus, removeWords, c(stopwords("en"), "bampb", "etc", "amp" ) )
+wordcloud(japan_corpus, max.words = 150, random.order = FALSE, colors = brewer.pal(8, "Dark2"))
+```
+
+## Similarities and Differences
+
+Similarities: The words "hotel", "room" and "pisa" were the most common words in all three countries word cloud. The word "tried" was common in Malaysia's and Japan's word cloud, the word "fresh" was common in Thailand's and Japan's word cloud and the word "one" was common in Malaysia's and Thailand's word cloud.
+
+Differences: The word "croissants" was only present in Thailand's word cloud, the word "euro" was only present in Malaysia's word cloud and the word "spacious" was only present in Japan's word cloud.
+
+# Part I (b)
+
+Thailand Dominant Sentiment
+```{r}
+thailand_sentiments <- get_nrc_sentiment(thailand_review$ReviewText)
+dominant_thailand_sentiment <- names(which.max(colSums(thailand_sentiments)))
+print(paste("The dominant sentiment for Thailand is:", dominant_thailand_sentiment))
+```
+
+Malaysia Dominant Sentiment
+```{r}
+malaysia_sentiments <- get_nrc_sentiment(malaysia_review$ReviewText)
+dominant_malaysia_sentiment <- names(which.max(colSums(malaysia_sentiments)))
+print(paste("The dominant sentiment for Malaysia is:", dominant_malaysia_sentiment))
+```
+
+Japan Dominant Sentiment
+```{r}
+japan_sentiments <- get_nrc_sentiment(japan_review$ReviewText)
+dominant_japan_sentiment <- names(which.max(colSums(japan_sentiments)))
+print(paste("The dominant sentiment for Japan is:", dominant_japan_sentiment))
+```
+
+
+## Part II: Explore, Clean, Prepare Data
+
+### 1. Load the Dataset
+```{r}
+# Load the sales data set
+sale<-read.csv("sales_data01.csv")
+```
+
+### 2 (a). Getting the Structure, Summary of each column
+This is done to ascertain the data type for each column, especially as there are various implied data types such as Date, Numeric, Int char. The findings here tells us that:
+  
+  - Order.Date and Ship.Date should be converted to 'Date' data type
+  
+  - Order.ID and Units.Sold to int
+  
+  - Unit.Price, Total.Revenue, Total.Cost, Total.Profit to float
+```{r}
+# Review data
+nrow(sale) ## get the number of rows in data frame
+str(sale) ## review structure of data frame
+
+## summary for each feature
+
+summary(sale)
+summary(sale$X.1)
+summary(sale$Region)
+summary(sale$Country)
+summary(sale$X)
+summary(sale$Sales.Channel)
+summary(sale$Order.Priority)
+summary(sale$Order.Date)
+summary(sale$Order.ID)
+summary(sale$Ship.Date)
+summary(sale$Units.Sold)
+summary(sale$Unit.Price)
+summary(sale$Unit.Cost)
+summary(sale$Total.Revenue)
+summary(sale$Total.Cost)
+summary(sale$Total.Profit)
+```
+
+
+### 2 (b). Resolving the misappropriate data types
+The following was done:
+  
+  - Order.Date and Ship.Date was converted to 'Date' data type
+  
+  - Order.ID and Units.Sold to int
+  
+  - Unit.Price, Total.Revenue, Total.Cost, Total.Profit to numeric
+```{r}
+#Convert the Order.Date and Ship.Date to Date data type
+sale$Order.Date <- as.Date(sale$Order.Date, format = "%m/%d/%Y")
+sale$Ship.Date <- as.Date(sale$Ship.Date, format = "%m/%d/%Y")
+
+#Convert Order.ID, Units.Sold to int
+sale$Order.ID<- as.integer(sale$Order.ID)
+sale$Units.Sold<-as.integer(sale$Units.Sold)
+
+#Convert Unit.Price, Total.Revenue, Total.Cost, Total.Profit to float
+sale$Unit.Price<-as.numeric(sale$Unit.Price)
+
+sale$Unit.Cost<-as.numeric(sale$Unit.Cost)
+
+sale$Total.Revenue<-as.numeric(sale$Total.Revenue)
+
+sale$Total.Cost<-as.numeric(sale$Total.Cost)
+
+sale$Total.Profit<-as.numeric(sale$Total.Profit)
+
+```
+
+### 3 (a). Checking for empty coulmns and missing rows and miscellanous checks
+The dataframe was then checked for empty fields and missing rows. The dataframe do possesed such findings and a manual check also determined the presence of rows that had 'k' right across from the second to the last column, and also those that had missing "total." values which could be calculated for using the unit.(price/cost/sold)
+
+Additionally, manual viewing helped us to discover 
+
+ -missing values for some regions
+ 
+ -some sales.channel having either no value or the value "YES"
+ 
+ -the name of the items category field is labelled X
+ 
+ -the field X.1 had no meaning to the dataframe presented or no use
+
+
+```{r}
+#Checking for empty coulmns
+apply(sale, 2, function(c) sum(is.na(c)))
+
+```
+
+### 3 (b): Resolving missing fields
+The following actions were taken:
+
+  - We calculated Total.Profit if its value is missing 
+  
+  - We calculated Total.Cost if its value is missing
+  
+  - We calculated Total.Revenue if its value is missing
+
+We did not apply the same to units.cost/price.sold as we cannot deduce the value accurately from the sales data we got.
+  
+```{r}
+#Calculate Total.Profit if its value is missing
+sale <- sale %>%
+  mutate(
+    Total.Profit = case_when(
+      is.na(Total.Profit) | Total.Profit == "" ~ Total.Revenue - Total.Cost,
+      TRUE ~ Total.Profit  # Keep existing value if not missing
+    )
+  )
+#Calculate Total.Cost if its value is missing
+sale <- sale %>%
+  mutate(
+    Total.Cost = case_when(
+      is.na(Total.Cost) | Total.Cost == "" ~ Unit.Cost * Units.Sold,
+      TRUE ~ Total.Cost  # Keep existing value if not missing
+    )
+  )
+
+#Calculate Total.Revenue if its value is missing
+library(dplyr)
+sale <- sale %>%
+  mutate(
+    Total.Revenue = case_when(
+      is.na(Total.Revenue) | Total.Revenue == "" ~ Unit.Price * Units.Sold,
+      TRUE ~ Total.Revenue  # Keep existing value if not missing
+    )
+  )
+```
+
+Afterwhich we resolved the following errors found in our manual checks:
+ 
+ -missing values for some regions by adding the region 
+ 
+ -some sales.channel having either no value or the value "YES" by removing them
+ 
+ -the name of the items category field is labelled X by renaming to Item.Category
+ 
+ -the field X.1 had no meaning to the dataframe presented or no use by dropping the column.
+ 
+ -remove any sales.channel if it was empty or set to 'none'.
+ 
+
+```{r}
+#Removing rows with No data OR only 'k'
+sale_clean<- sale[complete.cases(sale[, c("Region", "Country", "X", "Sales.Channel", "Order.Priority", "Order.Date",
+                                          "Order.ID", "Ship.Date", "Units.Sold", "Unit.Price", "Unit.Cost", 
+                                          "Total.Revenue", "Total.Cost", "Total.Profit")]), ]
+sale_clean<- sale_clean[!apply(sale_clean, 1, function(row) all(row == "k")), ]
+
+#Adding the Region for all countries
+region_country <- c(
+  "Sudan" = "Sub-Saharan Africa",
+  "Kenya" = "Sub-Saharan Africa",
+  "Nigeria" = "Sub-Saharan Africa",
+  "Ethiopia" = "Sub-Saharan Africa",
+  "Ethiopia" = "Sub-Saharan Africa",
+  "Denmark" = "Europe",
+  "Benin" = "Sub-Saharan Africa",
+  "The Gambia" = "Sub-Saharan Africa",
+  "Dominican Republic" = "Central America and the Caribbean",
+  "The Bahamas" = "Central America and the Caribbean",
+  "South Sudan" = "Sub-Saharan Africa",
+  "Mauritius" = "Sub-Saharan Africa",
+  "Vietnam" = "Asia",
+  "Bangladesh" = "Asia",
+  "Kosovo" = "Europe",
+  "Haiti" = "Central America and the Caribbean",
+  "Serbia" = "Europe",
+  "North Korea" = "Asia",
+  "France" = "Europe",
+  "India" = "Asia",
+  "Monaco" = "Europe",
+  "Saudi Arabia" = "Middle East and North Africa",
+  "Mexico" = "North America",
+  "Brunei" = "Asia",
+  "Djibouti" = "Sub-Saharan Africa",
+  "Saint Vincent and the Grenadines" = "Central America and the Caribbean",
+  "Seychelles" = "Sub-Saharan Africa",
+  "Malaysia" = "Asia",
+  "Fiji" = "Australia and Oceania",
+  "Sao Tome and Principe" = "Sub-Saharan Africa",
+  "Costa Rica" = "Central America and the Caribbean",
+  "Botswana" = "Sub-Saharan Africa",
+  "Nepal" = "Asia",
+  "Philippines" = "Asia",
+  "Lithuania" = "Europe",
+  "Georgia" = "Europe",
+  "Switzerland" = "Europe",
+  "Iran" = "Middle East and North Africa",
+  "Myanmar" = "Asia",
+  "Lesotho" = "Sub-Saharan Africa",
+  "Mozambique" = "Sub-Saharan Africa",
+  "Brunei" = "Asia",
+  "Netherlands" = "Europe",
+  "Luxembourg" = "Europe",
+  "Cyprus" = "Europe",
+  "Taiwan" = "Asia",
+  "Nicaragua" = "Central America and the Caribbean",
+  "Senegal" = "Sub-Saharan Africa",
+  "Burkina Faso" = "Sub-Saharan Africa",
+  "Singapore" = "Asia",
+  "Cameroon" = "Sub-Saharan Africa",
+  "Barbados" = "Central America and the Caribbean",
+  "Qatar" = "Middle East and North Africa",
+  "San Marino" = "Europe",
+  "Norway" = "Europe",
+  "Iceland" = "Europe",
+  "South Korea" = "Asia",
+  "Panama" = "Central America and the Caribbean",
+  "Israel" = "Middle East and North Africa",
+  "Vanuatu" = "Australia and Oceania",
+  "Uganda" = "Sub-Saharan Africa",
+  "Greece" = "Europe",
+  "Oman" = "Europe",
+  "South Africa" = "Sub-Saharan Africa",
+  "Uzbekistan" = "Asia",
+  "Afghanistan" = "Middle East and North Africa",
+  "Guatemala" = "Central America and the Caribbean",
+  "Tanzania" = "Sub-Saharan Africa",
+  "Kazakhstan" = "Asia",
+  "Dominica" = "Central America and the Caribbean",
+  "Morocco" = "Middle East and North Africa",
+  "Seychelles" = "Sub-Saharan Africa",
+  "Central African Republic" = "Sub-Saharan Africa",
+  "Bahrain" = "Middle East and North Africa",
+  "Madagascar" = "Sub-Saharan Africa",
+  "Liberia" = "Sub-Saharan Africa",
+  "Malawi" = "Sub-Saharan Africa",
+  "Maldives" = "Asia",
+  "Somalia" = "Middle East and North Africa",
+  "Montenegro" = "Europe",
+  "Czech Republic" = "Europe",
+  "Turkey" = "Middle East and North Africa",
+  "Slovakia" = "Europe",
+  "Mauritania" = "Sub-Saharan Africa",
+  "Australia" = "Australia and Oceania",
+  "New Zealand" = "Australia and Oceania",
+  "United States of America" = "North America",
+  "Samoa" = "Australia and Oceania",
+  "Rwanda" = "Sub-Saharan Africa",
+  "Bhutan" = "Asia",
+  "Canada" = "North America",
+  "Papua New Guinea" = "Australia and Oceania",
+  "Japan" = "Asia",
+  "Kyrgyzstan" = "Asia",
+  "Sweden" = "Europe",
+  "Albania" = "Europe",
+  "East Timor" = "Australia and Oceania",
+  "Russia" = "Europe",
+  "Algeria" = "Middle East and North Africa",
+  "Cape Verde" = "Sub-Saharan Africa",
+  "Libya" = "Middle East and North Africa",
+  "Zimbabwe" = "Sub-Saharan Africa",
+  "El Salvador" = "Central America and the Caribbean",
+  "Bosnia and Herzegovina" = "Europe",
+  "Bulgaria" = "Europe",
+  "Vatican City" = "Europe",
+  "Swaziland" = "Sub-Saharan Africa",
+  "Azerbaijan" = "Middle East and North Africa",
+  "Palau" = "Australia and Oceania",
+  "Namibia" = "Sub-Saharan Africa",
+  "Samoa" = "Australia and Oceania",
+  "Jordan" = "Middle East and North Africa",
+  "Cambodia" = "Asia",
+  "Finland" = "Europe",
+  "Grenada" = "Central America and the Caribbean",
+  "Syria" = "Middle East and North Africa",
+  "Burundi" = "Sub-Saharan Africa",
+  "Niger" = "Sub-Saharan Africa",
+  "United Arab Emirates" = "Middle East and North Africa",
+  "Indonesia" = "Asia",
+  "Guinea-Bissau" = "Sub-Saharan Africa",
+  "Hungary" = "Europe",
+  "Gabon" = "Sub-Saharan Africa",
+  "Zambia" = "Sub-Saharan Africa",
+  "Poland" = "Europe",
+  "Kuwait" = "Middle East and North Africa",
+  "Malta" = "Europe",
+  "Latvia" = "Europe",
+  "Croatia" = "Europe",
+  "Saint Kitts and Nevis" = "Central America and the Caribbean",
+  "Greenland" = "North America",
+  "Lebanon" = "Middle East and North Africa",
+  "China" = "Asia",
+  "Pakistan" = "Middle East and North Africa",
+  "Togo" = "Sub-Saharan Africa",
+  "Eritrea" = "Sub-Saharan Africa",
+  "Turkmenistan" = "Asia",
+  "Andorra" = "Europe",
+  "Romania" = "Europe",
+  "Ukraine" = "Europe",
+  "Armenia" = "Europe",
+  "Yemen" = "Middle East and North Africa",
+  "Seychelles" = "Sub-Saharan Africa",
+  "Estonia" = "Europe",
+  "Ireland" = "Europe",
+  "Egypt" = "Middle East and North Africa",
+  "Tajikistan" = "Asia",
+  "United Kingdom" = "Europe",
+  "Kiribati" = "Australia and Oceania",
+  "Cuba" = "Central America and the Caribbean",
+  "Equatorial Guinea" = "Sub-Saharan Africa",
+  "Moldova" = "Europe",
+  "Liechtenstein" = "Europe",
+  "Belarus" = "Europe",
+  "Mauritius" = "Sub-Saharan Africa",
+  "Portugal" = "Europe",
+  "Saint Lucia" = "Central America and the Caribbean",
+  "Laos" = "Asia",
+  "Chad" = "Sub-Saharan Africa",
+  "Mali" = "Sub-Saharan Africa",
+  "Austria" = "Europe",
+  "Ghana" = "Sub-Saharan Africa",
+  "Sierra Leone" = "Sub-Saharan Africa",
+  "Antigua and Barbuda" = "Central America and the Caribbean",
+  "Italy" = "Europe",
+  "Guinea" = "Australia and Oceania",
+  "Iraq" = "Middle East and North Africa",
+  "Tonga" = "Australia and Oceania",
+  "Comoros" = "Sub-Saharan Africa",
+  "Thailand" = "Asia",
+  "Marshall Islands" = "Australia and Oceania",
+  "Federated States of Micronesia" = "Australia and Oceania",
+  "Mongolia" = "Asia",
+  "Democratic Republic of the Congo" = "Sub-Saharan Africa",
+  "Republic of the Congo" = "Sub-Saharan Africa",
+  "Tuvalu" = "Australia and Oceania",
+  "Nauru" = "Australia and Oceania",
+  "Sri Lanka" = "Asia"
+  
+)
+sale_clean$Country <- sale_clean$Country %>% 
+  trimws() %>%                # Remove leading/trailing spaces
+  tolower() %>%               
+  tools::toTitleCase()        
+
+sale_clean$Region <- sale_clean$Region %>%
+  # Replace double quotes with single ?
+  gsub('"', "?", .) %>%
+  # Convert all NA indicators to simple NA
+  ifelse(. %in% c("", "?", "??", "NA", "N/A", "Not Applicable"), NA, .) %>%
+  # Trim whitespace
+  trimws()
+
+# Identify unmapped countries (diagnostic)
+unmapped_countries <- unique(sale_clean$Country[is.na(sale_clean$Region) & 
+                                                !(sale_clean$Country %in% names(region_country))])
+
+# Applying mapping with comprehensive case handling
+sale_clean <- sale_clean %>%
+  mutate(
+    Region = case_when(
+      # Case 1: Valid mapping exists
+      is.na(Region) & Country %in% names(region_country) ~ region_country[Country],
+      
+      # Case 2: No mapping exists - create explicit missing code
+      is.na(Region) ~ "UNMAPPED_REGION",
+      
+      # Case 3: Keep existing valid regions
+      TRUE ~ Region
+    )
+  )
+
+# Check remaining NAs
+# sum(is.na(sale_clean$Region))
+
+# Clean the sales.channel
+library(dplyr)
+sale_clean <- sale_clean %>% 
+  filter(Sales.Channel != "YES")
+
+#Rename the "X" column to "Item.Category"
+library(dplyr)
+sale_clean <- sale_clean %>% 
+  rename(Item.Category = X)
+
+library(dplyr)
+sale_clean <- sale_clean %>% 
+  filter(Item.Category != "")
+
+#Drop X.1 has there is no use for it
+sale_clean <- sale_clean[, -which(names(sale_clean) == "X.1")]
+
+# Remove Sales.Channel if it is empty:
+sale_clean <- sale_clean %>%
+  filter(!is.na(Sales.Channel) & trimws(Sales.Channel) != "")
+
+sale_clean <- sale_clean %>% 
+  filter(Item.Category != "None")
+```
+
+### 4 (a). Checking for outliers
+
+### a. Units.Sold
+```{r}
+# Units.Sold
+hist(sale_clean$Units.Sold, main="Histogram of Units Sold", xlab="Units Sold", col="red", breaks=20)
+outlier.Units.Sold <- boxplot.stats(sale_clean$Units.Sold)$out
+cat("Number of outliers:", length(outlier.Units.Sold), "\n")
+```
+
+### b. Unit.Price
+```{r}
+# Unit.Price
+hist(sale_clean$Unit.Price, main="Histogram of Unit Price", xlab="Unit Price", col="pink", breaks=20)
+outlier.Unit.Price <- boxplot.stats(sale_clean$Unit.Price)$out
+cat("Number of outliers:", length(outlier.Unit.Price), "\n")
+```
+
+### c. Unit.Cost
+```{r}
+hist(sale_clean$Unit.Cost, main="Histogram of Unit Cost", xlab="Unit Cost", col="blue", breaks=20)
+outlier.Unit.Cost <- boxplot.stats(sale_clean$Unit.Cost)$out
+cat("Number of outliers:", length(outlier.Unit.Cost), "\n")
+```
+
+### d. Total.Revenue
+```{r}
+hist(sale_clean$Total.Revenue, main="Histogram of Total Revenue", xlab="Total Revenue", col="orange", breaks=20)
+outlier.Total.Revenue <- boxplot.stats(sale_clean$Total.Revenue)$out
+cat("Number of outliers:", length(outlier.Total.Revenue), "\n")
+```
+
+### d. Total.Cost
+```{r}
+hist(sale_clean$Total.Cost, main="Histogram of Total Cost", xlab="Total Cost", col="green", breaks=20)
+outlier.Total.Cost <- boxplot.stats(sale_clean$Total.Cost)$out
+cat("Number of outliers:", length(outlier.Total.Cost), "\n")
+```
+
+### e. Total.Profit
+```{r}
+hist(sale_clean$Total.Profit, main="Histogram Total Profit", xlab="Total Profit", col="purple", breaks=20)
+outlier.Total.Profit <- boxplot.stats(sale_clean$Total.Profit)$out
+cat("Number of outliers:", length(outlier.Total.Profit), "\n")
+```
+
+
+### 4 (b). Resolving Outliers
+The outliers were detected for Total.Revenue, Total.Cost, and Total.Profit. These outliers were handled by enforcing the outliers to the upper and lower bounds. This will ensure that the visulaizations created will not be skewed towards the outliers.
+
+### Total.Revenue
+```{r}
+iqr <- IQR(sale_clean$Total.Revenue, na.rm = TRUE)
+q25 <- quantile(sale_clean$Total.Revenue, 0.25, na.rm = TRUE)
+q75 <- quantile(sale_clean$Total.Revenue, 0.75, na.rm = TRUE)
+
+lower_bound_iqr <- q25 - (1.5 * iqr)
+upper_bound_iqr <- q75 + (1.5 * iqr)
+
+# Enforce bounds (using quantile method)
+sale_clean$Total.Revenue_Bound <- ifelse(
+  sale_clean$Total.Revenue < lower_bound_iqr, lower_bound_iqr,
+  ifelse(
+    sale_clean$Total.Revenue > upper_bound_iqr, upper_bound_iqr,
+    sale_clean$Total.Revenue
+  )
+)
+hist(sale_clean$Total.Revenue_Bound, main="Histogram of Total Revenue", xlab="Total Revenue", col="orange", breaks=20)
+
+```
+
+### Total.Cost
+```{r}
+iqr <- IQR(sale_clean$Total.Cost, na.rm = TRUE)
+q25 <- quantile(sale_clean$Total.Cost, 0.25, na.rm = TRUE)
+q75 <- quantile(sale_clean$Total.Cost, 0.75, na.rm = TRUE)
+
+lower_bound_iqr <- q25 - (1.5 * iqr)
+upper_bound_iqr <- q75 + (1.5 * iqr)
+
+# Enforce bounds (using quantile method)
+sale_clean$Total.Cost_Bound <- ifelse(
+  sale_clean$Total.Cost < lower_bound_iqr, lower_bound_iqr,
+  ifelse(
+    sale_clean$Total.Cost > upper_bound_iqr, upper_bound_iqr,
+    sale_clean$Total.Cost
+  )
+)
+hist(sale_clean$Total.Cost_Bound, main="Histogram of Total Cost", xlab="Total Cost", col="green", breaks=20)
+
+```
+
+### Total.Profit
+```{r}
+iqr <- IQR(sale_clean$Total.Profit, na.rm = TRUE)
+q25 <- quantile(sale_clean$Total.Profit, 0.25, na.rm = TRUE)
+q75 <- quantile(sale_clean$Total.Profit, 0.75, na.rm = TRUE)
+
+lower_bound_iqr <- q25 - (1.5 * iqr)
+upper_bound_iqr <- q75 + (1.5 * iqr)
+
+# Enforce bounds (using quantile method)
+sale_clean$Total.Profit_Bound <- ifelse(
+  sale_clean$Total.Profit < lower_bound_iqr, lower_bound_iqr,
+  ifelse(
+    sale_clean$Total.Profit > upper_bound_iqr, upper_bound_iqr,
+    sale_clean$Total.Profit
+  )
+)
+hist(sale_clean$Total.Profit_Bound, main="Histogram Total Profit", xlab="Total Profit", col="purple", breaks=20)
+```
+
+### 3 (a): What is the average amount spent on Personal Care vs. Cosmetics in each region?  
+```{r warning=FALSE, message=FALSE}
+library(tidyr)
+library(ggplot2)
+```
+
+```{r}
+avg_spending <- sale_clean %>%
+  filter(Item.Category %in% c("Personal Care", "Cosmetics")) %>%
+  group_by(Region, Item.Category) %>%
+  summarise(
+    Avg_Amount = mean(Total.Revenue_Bound, na.rm = TRUE),
+    .groups = 'drop'
+  ) %>%
+  pivot_wider(
+    names_from = Item.Category,
+    values_from = Avg_Amount
+  )
+
+avg_long <- avg_spending %>%
+  pivot_longer(
+    cols = c("Personal Care", "Cosmetics"),
+    names_to = "Category",
+    values_to = "Amount"
+  )
+
+ggplot(avg_long, aes(x = Region, y = Amount, fill = Category)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_manual(values = c("Personal Care" = "#1f77b4", "Cosmetics" = "#ff7f0e")) +
+  labs(
+    title = "Average Spending by Region: Personal Care vs. Cosmetics",
+    x = "Region",
+    y = "Average Amount Spent ($)",
+    fill = "Product Category"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels
+    legend.position = "bottom"
+  ) +
+  scale_y_continuous(labels = scales::dollar)  # Format y-axis as currency
+
+```
+
+### 3 (b): In which country do people use the most cosmetics? 
+```{r}
+# Filter for cosmetics and summarize by country
+top_5_countries <- sale_clean %>%
+  filter(Item.Category == "Cosmetics") %>%
+  group_by(Country) %>%
+  summarise(
+    Total_Units_Sold = sum(Units.Sold, na.rm = TRUE)
+  ) %>%
+  arrange(desc(Total_Units_Sold)) %>%  # Sort highest to lowest
+  slice_head(n = 5)  # Select top 5 countries
+
+ggplot(top_5_countries, aes(x = reorder(Country, Total_Units_Sold), y = Total_Units_Sold)) +
+  geom_col(fill = "steelblue") +  # Use bars
+  geom_text(aes(label = Total_Units_Sold), vjust = -0.5, size = 3.5) +
+  labs(
+    title = "Top 5 Countries by Cosmetics Usage",
+    x = "Country",
+    y = "Total Units Sold"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels
+```
+
+### 3 (c): In 2016, which product had the highest and lowest quantity sold across each region?
+```{r}
+sale_2016 <- sale_clean %>%
+  mutate(Year = as.numeric(format(as.Date(Order.Date), "%Y")) ) %>%
+  filter(Year == 2016)
+
+product_sales <- sale_2016 %>%
+  group_by(Region, Item.Category) %>%
+  summarise(Total_Units = sum(Units.Sold, na.rm = TRUE), .groups = "drop")
+
+top_products <- product_sales %>%
+  group_by(Region) %>%
+  slice_max(Total_Units, n = 1, with_ties = FALSE) %>%
+  rename(Product = Item.Category, Units = Total_Units) %>%
+  mutate(Type = "Highest")
+
+bottom_products <- product_sales %>%
+  group_by(Region) %>%
+  slice_min(Total_Units, n = 1, with_ties = FALSE) %>%
+  rename(Product = Item.Category, Units = Total_Units) %>%
+  mutate(Type = "Lowest")
+
+combined <- bind_rows(top_products, bottom_products)
+
+ggplot(combined, aes(x = Region, y = Units, fill = Type)) +
+  geom_col(position = "dodge") +
+  geom_text(
+    aes(label = Product), 
+    position = position_dodge(width = 0.9), 
+    vjust = -0.5, 
+    size = 3
+  ) +
+  scale_fill_manual(values = c("Highest" = "#1f77b4", "Lowest" = "#ff7f0e")) +
+  labs(
+    title = "2016: Highest & Lowest Selling Products by Region",
+    x = "Region",
+    y = "Units Sold",
+    fill = "Product Type"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom"
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1)))  # Add space for labels
+```
+
+### 3(d): What is the average profit for each item by region? 
+```{r message=FALSE, warning=FALSE}
+library(ggplot2)
+library(viridis)
+```
+
+```{r}
+# Creating the heatmap
+avg_profit <- sale_clean %>%
+  group_by(Region, Item.Category) %>%
+  summarise(
+    Avg_Profit = mean(Total.Profit_Bound, na.rm = TRUE),
+    .groups = 'drop'
+  )
+
+ggplot(avg_profit, aes(x = Region, y = Item.Category, fill = Avg_Profit)) +
+  geom_tile(color = "white", linewidth = 0.3) +
+  scale_fill_viridis(
+    name = "Average Profit ($)", 
+    option = "plasma", 
+    direction = -1,  # Higher values = darker colors
+    labels = scales::dollar
+  ) +
+  labs(
+    title = "Average Profit by Product Category and Region",
+    x = "Region",
+    y = "Product Category"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
+    axis.text.y = element_text(size = 9),
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    legend.position = "right"
+  ) +
+  geom_text(
+    aes(label = scales::dollar(Avg_Profit, accuracy = 1)), 
+    color = "white", 
+    size = 3
+  )
+
+```
+
+### 3(e) i: In which of the seasons (Spring, Summer, Autumn, Winter) do people spend the most on Cosmetics?
+```{r message=FALSE, warning=FALSE}
+library(lubridate)  # For date manipulation
+```
+
+```{r}
+# Function to assign seasons based on month
+get_season <- function(date) {
+  month <- month(date)
+  case_when(
+    month %in% 3:5 ~ "Spring",
+    month %in% 6:8 ~ "Summer",
+    month %in% 9:11 ~ "Autumn",
+    TRUE ~ "Winter"
+  )
+}
+
+# Adding Season column
+seasonal_spending <- sale_clean %>%
+  mutate(Season = get_season(Ship.Date))
+
+# Calculate Cosmetics Spending by Season
+cosmetics_season <- seasonal_spending %>%
+  filter(Item.Category == "Cosmetics") %>%
+  group_by(Season) %>%
+  summarise(
+    Total_Revenue = sum(Total.Revenue_Bound, na.rm = TRUE),
+    Avg_Revenue = mean(Total.Revenue_Bound, na.rm = TRUE),
+    .groups = 'drop'
+  ) %>%
+  arrange(desc(Total_Revenue))  # Sort by highest spending
+
+top_season <- cosmetics_season %>%
+  slice_max(Total_Revenue, n = 1) %>% 
+  pull(Season)
+
+ggplot(cosmetics_season, aes(x = Season, y = Total_Revenue, fill = Season)) +
+  geom_col() +
+  # Add value labels
+  geom_text(
+    aes(label = scales::dollar(Total_Revenue)), 
+    vjust = -0.5, 
+    size = 3.5,
+    color = "black"
+  ) +
+  scale_fill_manual(values = c(
+    "Spring" = "#56B4E9",
+    "Summer" = "#009E73",
+    "Autumn" = "#F0E442",
+    "Winter" = "#CC79A7"
+  )) +
+  # Labels and theme
+  labs(
+    title = paste("Cosmetics Spending by Season | Top Season:", top_season),
+    x = "Season",
+    y = "Total Revenue ($)"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    axis.text.x = element_text(size = 11)
+  ) +
+  scale_y_continuous(
+    labels = scales::dollar,
+    expand = expansion(mult = c(0, 0.1)) )  # Add space for labels
+```
+
+
+
+### 3(e) ii. In which of the seasons (Spring, Summer, Autumn, Winter) do people spend the most on Personal Care
+```{r}
+library(lubridate)  # For date manipulation
+
+# Function to assign seasons based on month
+get_season <- function(date) {
+  month <- month(date)
+  case_when(
+    month %in% 3:5 ~ "Spring",
+    month %in% 6:8 ~ "Summer",
+    month %in% 9:11 ~ "Autumn",
+    TRUE ~ "Winter"
+  )
+}
+
+# Adding Season column
+seasonal_spending <- sale_clean %>%
+  mutate(Season = get_season(Ship.Date))
+
+# Calculate Cosmetics Spending by Season
+cosmetics_season <- seasonal_spending %>%
+  filter(Item.Category == "Personal Care") %>%
+  group_by(Season) %>%
+  summarise(
+    Total_Revenue = sum(Total.Revenue_Bound, na.rm = TRUE),
+    Avg_Revenue = mean(Total.Revenue_Bound, na.rm = TRUE),
+    .groups = 'drop'
+  ) %>%
+  arrange(desc(Total_Revenue))  # Sort by highest spending
+
+top_season <- cosmetics_season %>%
+  slice_max(Total_Revenue, n = 1) %>% 
+  pull(Season)
+
+ggplot(cosmetics_season, aes(x = Season, y = Total_Revenue, fill = Season)) +
+  geom_col() +
+  # Add value labels
+  geom_text(
+    aes(label = scales::dollar(Total_Revenue)), 
+    vjust = -0.5, 
+    size = 3.5,
+    color = "black"
+  ) +
+  scale_fill_manual(values = c(
+    "Spring" = "#56B4E9",
+    "Summer" = "#009E73",
+    "Autumn" = "#F0E442",
+    "Winter" = "#CC79A7"
+  )) +
+  # Labels and theme
+  labs(
+    title = paste("Personal Care Spending by Season | Top Season:", top_season),
+    x = "Season",
+    y = "Total Revenue ($)"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    axis.text.x = element_text(size = 11)
+  ) +
+  scale_y_continuous(
+    labels = scales::dollar,
+    expand = expansion(mult = c(0, 0.1)) )  # Add space for labels
+```
+
+### 3(f). Find the monthly average units sold for Personal Care, Cosmetics and Beverages and plot a series graph for ONE year . Discuss the resulting visualization.
+In the month of 2010, most persons ordered beverages in the month of October with the least units sold in January. Secondly, peak cosmetics perchases was in the month of August, and the lowest point in units sold is found in September. Finally, personal care peaked in March and saw its lowest point in the month of August.
+
+```{r}
+library(ggplot2)
+
+# Filter for the 3 categories and extract year/month
+monthly_avg <- sale_clean %>%
+  filter(Item.Category %in% c("Personal Care", "Cosmetics", "Beverages")) %>%
+  mutate(
+    Year = year(Order.Date),
+    Month = month(Order.Date, label = TRUE, abbr = TRUE)
+  ) %>%
+  
+  # Filter for 2010
+  filter(Year == 2010) %>%
+  group_by(Month, Item.Category) %>%
+  summarise(
+    Avg_Units_Sold = mean(Units.Sold, na.rm = TRUE),
+    .groups = 'drop'
+  )
+
+ggplot(monthly_avg, aes(x = Month, y = Avg_Units_Sold, 
+                        color = Item.Category, group = Item.Category)) +
+  geom_line(linewidth = 1.2) +  # Solid lines
+  geom_point(size = 3) +        # Highlight data points
+  scale_color_manual(values = c("Personal Care" = "#1f77b4", 
+                                "Cosmetics" = "#ff7f0e", 
+                                "Beverages" = "#2ca02c")) +
+  labs(
+    title = "Monthly Average Units Sold (2010)",
+    x = "Month",
+    y = "Average Units Sold",
+    color = "Product Category"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  scale_y_continuous(limits = c(0, NA))  # Start y-axis at 0
+
+```
+
+### 3 (g). Determine correlation between Total.Profit and the other features (include visualizations) in the dataset.
+```{r message=FALSE, warning=FALSE}
+library(fastDummies)
+library(corrplot)
+library(caret)
+library(lattice)
+```
+
+```{r}
+
+sale_clean <- dummy_cols(sale_clean, select_columns = "Sales.Channel", remove_first_dummy = TRUE)
+cor_matrix <- cor(sale_clean %>% select_if(is.numeric))
+
+total_profit_cor <- cor_matrix["Total.Profit", ]
+total_profit_cor_matrix <- matrix(total_profit_cor, nrow = 1, dimnames = list("Total.Profit", names(total_profit_cor)))
+
+corrplot(total_profit_cor_matrix, method = "number")
+```
+
+### 3 (h). Based on correlation from part (g), build a predictive model that can be used to predict Total.Profit. Determine the accuracy of the model and show the result of a sample set of predictions for data not included in the given dataset.
+
+Based on the correlation scores in part i, "Total.Profit", "Units.Sold", "Unit.Cost", 
+"Total.Revenue", "Unit.Price", "Total.Cost" will be used as features in the linear regression model.
+```{r}
+new_min <-0
+new_max <-1
+
+features <- c("Total.Profit", "Units.Sold", "Unit.Cost", 
+               "Total.Revenue", "Unit.Price", "Total.Cost")
+
+for (feature in features){
+  
+  mi <- min(sale_clean[[feature]],na.rm = TRUE)
+  mx <- max(sale_clean[[feature]],na.rm = TRUE)
+  
+  sale_clean[[paste0(feature, "_scaled")]] <- ((sale_clean[[feature]] - mi) / (mx - mi)) * (new_max - new_min) + new_min
+  
+}
+
+#Splitting the data
+set.seed(123)
+train_index <- createDataPartition(sale_clean$Total.Profit, p = 0.8, list = FALSE)
+train_data <- sale_clean[train_index, ]
+test_data <- sale_clean[-train_index, ]
+
+#Building the model
+formula <- as.formula("Total.Profit ~ Units.Sold_scaled + Unit.Cost_scaled + Total.Revenue_scaled + 
+                        Unit.Price_scaled + Total.Cost_scaled")
+#Training the model
+lm <- lm(formula, data = train_data)
+
+#Making Predictions
+predictions <- predict(lm, test_data)
+RMSE_Rsquared_MAE <- postResample(predictions, test_data$Total.Profit)
+print(RMSE_Rsquared_MAE)
+
+#Calculating accuracy
+
+error_margin <- 0.00001
+correct <- 0
+total <- length(predictions)
+
+for (i in 1:total) {
+  
+  actual = test_data$Total.Profit[i]
+  predicted = predictions[i]
+  
+  if (abs(actual-predicted)/actual <= error_margin) {
+    correct <- correct + 1
+  }
+}
+
+accuracy_score <- (correct / total) * 100
+print(paste("The accuracy score of the model is:", round(accuracy_score, 2), "%"))
+
+#Sample Prediction
+sample_predictions <- data.frame(
+  actual = test_data$Total.Profit[1:10], 
+  predicted = predictions[1:10]
+)
+print(sample_predictions)
+
+```
+
+### 3 (i).  Explain how this model may help the investors make better decisions. 
+This model will help investors make better decisions because of the models provide predictions on future profit based on some features such as Total.Revenue, Total.Cost and Units.Sold. Investors can accurately estimate potential returns and this is supported by the fact that the Root Mean Squared Error of the model is 0.00000001371153.
+
+Another way this model helps investors is by risk management. If the model predicts decline in profits then investors can take the steps necessary to prevent such case. Last but not least, this model helps investors as it can serve as a performance benchmark for measuring performance as investors can compare actual profits against what was predicted to access how effective are their business strategies. 
